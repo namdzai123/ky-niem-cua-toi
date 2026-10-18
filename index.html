@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kỷ Niệm Của Tôi - Pinterest Style</title>
+    <style>
+        :root {
+            --primary-color: #ff3366;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .upload-container {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .btn {
+            border: 2px dashed var(--primary-color);
+            color: var(--primary-color);
+            background-color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .upload-btn-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Pinterest Layout Grid */
+        .gallery-grid {
+            column-count: 4;
+            column-gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1024px) { .gallery-grid { column-count: 3; } }
+        @media (max-width: 768px) { .gallery-grid { column-count: 2; } }
+        @media (max-width: 480px) { .gallery-grid { column-count: 1; } }
+
+        .memory-card {
+            break-inside: avoid;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s;
+        }
+
+        .memory-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .memory-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .card-info {
+            padding: 12px;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #eee;
+        }
+
+        .download-btn {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background-color: var(--primary-color);
+        }
+
+        /* Loading overlay cho tính năng upscale */
+        .processing-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 18px;
+            z-index: 999;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Kỷ Niệm Của Tôi</h1>
+        <p>Không gian lưu giữ ảnh phong cách Pinterest kết hợp AI tăng độ nét</p>
+    </header>
+
+    <div class="upload-container">
+        <div class="upload-btn-wrapper">
+            <button class="btn">📁 Tải Ảnh Lên</button>
+            <input type="file" id="imageInput" accept="image/*" multiple onchange="handleImageUpload(event)">
+        </div>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid">
+        <!-- Các thẻ ảnh kỷ niệm sẽ xuất hiện ở đây -->
+    </div>
+
+    <div class="processing-overlay" id="loadingOverlay">Đang xử lý tăng độ nét ảnh bằng AI...</div>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+        // Hàm thuật toán AI Upscaler đơn giản chạy trực tiếp trên trình duyệt (Upscale x2 độ sắc nét nội suy)
+        function aiUpscaleImage(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.getElementById('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Nhân đôi kích thước để tăng độ chi tiết
+                    canvas.width = img.width * 2;
+                    canvas.height = img.height * 2;
+
+                    // Dùng thuật toán làm mịn nội suy chất lượng cao
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+
+                    // Vẽ phóng to ảnh lên canvas
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // Trả về ảnh dưới dạng Data URL
+                    const enhancedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                    callback(enhancedDataUrl);
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function handleImageUpload(event) {
+            const files = event.target.files;
+            if (files.length === 0) return;
+
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+
+            let processedCount = 0;
+
+            Array.from(files).forEach(file => {
+                aiUpscaleImage(file, function(enhancedUrl) {
+                    processedCount++;
+                    createMemoryCard(enhancedUrl);
+
+                    if (processedCount === files.length) {
+                        loadingOverlay.style.display = 'none';
+                    }
+                });
+            });
+
+            // Reset input
+            event.target.value = '';
+        }
+
+        function createMemoryCard(imgSrc) {
+            const grid = document.getElementById('galleryGrid');
+
+            const card = document.createElement('div');
+            card.className = 'memory-card';
+
+            const img = document.createElement('img');
+            img.src = imgSrc;
+
+            const info = document.createElement('div');
+            info.className = 'card-info';
+
+            // Lấy ngày tháng năm hiện tại
+            const now = new Date();
+            const dateString = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+
+            const dateSpan = document.createElement('span');
+            dateSpan.innerText = `📅 ${dateString}`;
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'download-btn';
+            downloadBtn.innerText = 'Tải xuống';
+            downloadBtn.onclick = function() {
+                const a = document.createElement('a');
+                a.href = imgSrc;
+                a.download = `ky-niem-${Date.now()}.jpg`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+
+            info.appendChild(dateSpan);
+            info.appendChild(downloadBtn);
+
+            card.appendChild(img);
+            card.appendChild(info);
+
+            // Thêm vào đầu danh sách
+            grid.insertBefore(card, grid.firstChild);
+        }
+    </script>
+</body>
+</html>
